@@ -1,5 +1,6 @@
-import { Controller, Get } from '@nestjs/common';
+﻿import { Body, Controller, Get, Param, Put } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { UpdateWorkoutDto } from './dto/update-workout.dto';
 import { WorkoutsService } from './workouts.service';
 
 @ApiTags('workouts')
@@ -10,5 +11,10 @@ export class WorkoutsController {
   @Get()
   list() {
     return this.workoutsService.listWorkoutPlans();
+  }
+
+  @Put(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateWorkoutDto) {
+    return this.workoutsService.updateWorkoutPlan(id, dto);
   }
 }

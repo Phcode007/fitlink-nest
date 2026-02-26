@@ -1,5 +1,6 @@
-import { Controller, Get } from '@nestjs/common';
+﻿import { Body, Controller, Get, Param, Put } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { SubscriptionsService } from './subscriptions.service';
 
 @ApiTags('subscriptions')
@@ -10,5 +11,10 @@ export class SubscriptionsController {
   @Get()
   list() {
     return this.subscriptionsService.listSubscriptions();
+  }
+
+  @Put(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateSubscriptionDto) {
+    return this.subscriptionsService.updateSubscription(id, dto);
   }
 }
