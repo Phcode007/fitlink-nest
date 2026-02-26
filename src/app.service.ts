@@ -1,8 +1,16 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class AppService {
-  getHello(): string {
-    return 'Hello World!';
+  getHello() {
+    return { message: 'FitLink API is running' };
+  }
+
+  getHealth() {
+    return {
+      status: 'ok',
+      service: 'fitlink-api',
+      timestamp: new Date().toISOString(),
+    };
   }
 }
