@@ -1,0 +1,194 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  TRAINER
+  NUTRITIONIST
+  ADMIN
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  email         String         @unique
+  passwordHash  String         @map("password_hash")
+  role          Role           @default(USER)
+  isActive      Boolean        @default(true) @map("is_active")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  trainer       Trainer?
+  nutritionist  Nutritionist?
+  profile       UserProfile?
+  workoutPlans  WorkoutPlan[]
+  dietPlans     DietPlan[]
+  bodyMetrics   BodyMetric[]
+  subscriptions Subscription[]
+
+  @@map("users")
+}
+
+model Trainer {
+  id              String        @id @default(uuid()) @db.Uuid
+  userId          String        @unique @map("user_id") @db.Uuid
+  bio             String?
+  certifications  String[]
+  yearsExperience Int?          @map("years_experience")
+  approved        Boolean       @default(false)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutPlans    WorkoutPlan[]
+
+  @@map("trainers")
+}
+
+model Nutritionist {
+  id              String     @id @default(uuid()) @db.Uuid
+  userId          String     @unique @map("user_id") @db.Uuid
+  bio             String?
+  certifications  String[]
+  yearsExperience Int?       @map("years_experience")
+  approved        Boolean    @default(false)
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dietPlans       DietPlan[]
+
+  @@map("nutritionists")
+}
+
+model UserProfile {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @unique @map("user_id") @db.Uuid
+  fullName      String    @map("full_name")
+  birthDate     DateTime? @map("birth_date") @db.Date
+  heightCm      Decimal?  @map("height_cm") @db.Decimal(5, 2)
+  weightKg      Decimal?  @map("weight_kg") @db.Decimal(5, 2)
+  goal          String?
+  activityLevel String?   @map("activity_level")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model WorkoutPlan {
+  id          String            @id @default(uuid()) @db.Uuid
+  trainerId   String            @map("trainer_id") @db.Uuid
+  userId      String            @map("user_id") @db.Uuid
+  title       String
+  description String?
+  startDate   DateTime?         @map("start_date") @db.Date
+  endDate     DateTime?         @map("end_date") @db.Date
+  isActive    Boolean           @default(true) @map("is_active")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  trainer     Trainer           @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises   WorkoutExercise[]
+
+  @@index([trainerId])
+  @@index([userId])
+  @@map("workout_plans")
+}
+
+model WorkoutExercise {
+  id             String      @id @default(uuid()) @db.Uuid
+  workoutPlanId  String      @map("workout_plan_id") @db.Uuid
+  name           String
+  sets           Int
+  reps           Int
+  restSeconds    Int?        @map("rest_seconds")
+  executionOrder Int         @map("execution_order")
+  notes          String?
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+  workoutPlan    WorkoutPlan @relation(fields: [workoutPlanId], references: [id], onDelete: Cascade)
+
+  @@index([workoutPlanId])
+  @@map("workout_exercises")
+}
+
+model DietPlan {
+  id             String       @id @default(uuid()) @db.Uuid
+  nutritionistId String       @map("nutritionist_id") @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
+  title          String
+  description    String?
+  dailyCalories  Int?         @map("daily_calories")
+  startDate      DateTime?    @map("start_date") @db.Date
+  endDate        DateTime?    @map("end_date") @db.Date
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  nutritionist   Nutritionist @relation(fields: [nutritionistId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meals          DietMeal[]
+
+  @@index([nutritionistId])
+  @@index([userId])
+  @@map("diet_plans")
+}
+
+model DietMeal {
+  id             String    @id @default(uuid()) @db.Uuid
+  dietPlanId     String    @map("diet_plan_id") @db.Uuid
+  mealName       String    @map("meal_name")
+  foods          Json
+  calories       Int?
+  mealTime       DateTime? @map("meal_time")
+  executionOrder Int       @map("execution_order")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  dietPlan       DietPlan  @relation(fields: [dietPlanId], references: [id], onDelete: Cascade)
+
+  @@index([dietPlanId])
+  @@map("diet_meals")
+}
+
+model BodyMetric {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  measuredAt     DateTime @default(now()) @map("measured_at")
+  weightKg       Decimal? @map("weight_kg") @db.Decimal(5, 2)
+  bodyFatPercent Decimal? @map("body_fat_percent") @db.Decimal(5, 2)
+  muscleMassKg   Decimal? @map("muscle_mass_kg") @db.Decimal(5, 2)
+  bmi            Decimal? @db.Decimal(5, 2)
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("body_metrics")
+}
+
+model Subscription {
+  id                    String             @id @default(uuid()) @db.Uuid
+  userId                String             @map("user_id") @db.Uuid
+  planName              String             @map("plan_name")
+  status                SubscriptionStatus @default(TRIALING)
+  currentPeriodStart    DateTime           @map("current_period_start")
+  currentPeriodEnd      DateTime           @map("current_period_end")
+  gatewayCustomerId     String?            @map("gateway_customer_id")
+  gatewaySubscriptionId String?            @map("gateway_subscription_id")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("subscriptions")
+}
