@@ -1,4 +1,4 @@
-﻿import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -20,6 +20,14 @@ export class TrainersController {
   getDashboard(@Req() req: Request) {
     const user = req.user as { sub: string };
     return this.trainersService.getTrainerDashboard(user.sub);
+  }
+
+  @Roles(Role.TRAINER)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get('profile')
+  getProfile(@Req() req: Request) {
+    const user = req.user as { sub: string };
+    return this.trainersService.getTrainerProfile(user.sub);
   }
 
   @Roles(Role.TRAINER)

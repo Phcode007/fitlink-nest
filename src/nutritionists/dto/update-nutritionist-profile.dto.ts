@@ -1,6 +1,11 @@
-﻿import { IsBoolean, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class UpdateNutritionistProfileDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  crn?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(1000)

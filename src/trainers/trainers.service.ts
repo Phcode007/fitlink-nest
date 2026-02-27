@@ -1,4 +1,4 @@
-﻿import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateTrainerProfileDto } from './dto/update-trainer-profile.dto';
 
@@ -10,8 +10,30 @@ export class TrainersService {
     return { message: `Trainer dashboard for user ${userId}` };
   }
 
+  async getTrainerProfile(userId: string) {
+    const profile = await this.prisma.trainer.findUnique({
+      where: { userId },
+      select: {
+        id: true,
+        userId: true,
+        cref: true,
+        bio: true,
+        yearsExperience: true,
+        approved: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Trainer profile not found');
+    }
+
+    return profile;
+  }
+
   async updateTrainerProfile(userId: string, dto: UpdateTrainerProfileDto) {
     if (
+      dto.cref === undefined &&
       dto.bio === undefined &&
       dto.yearsExperience === undefined &&
       dto.approved === undefined
@@ -22,12 +44,14 @@ export class TrainersService {
     return this.prisma.trainer.upsert({
       where: { userId },
       update: {
+        cref: dto.cref,
         bio: dto.bio,
         yearsExperience: dto.yearsExperience,
         approved: dto.approved,
       },
       create: {
         userId,
+        cref: dto.cref,
         bio: dto.bio,
         yearsExperience: dto.yearsExperience,
         approved: dto.approved ?? false,
@@ -36,6 +60,7 @@ export class TrainersService {
       select: {
         id: true,
         userId: true,
+        cref: true,
         bio: true,
         yearsExperience: true,
         approved: true,

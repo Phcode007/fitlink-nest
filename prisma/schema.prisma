@@ -25,6 +25,8 @@ enum SubscriptionStatus {
 model User {
   id            String         @id @default(uuid()) @db.Uuid
   email         String         @unique
+  username      String?        @unique
+  cpf           String?        @unique
   passwordHash  String         @map("password_hash")
   role          Role           @default(USER)
   isActive      Boolean        @default(true) @map("is_active")
@@ -44,6 +46,7 @@ model User {
 model Trainer {
   id              String        @id @default(uuid()) @db.Uuid
   userId          String        @unique @map("user_id") @db.Uuid
+  cref            String?       @unique
   bio             String?
   certifications  String[]
   yearsExperience Int?          @map("years_experience")
@@ -59,6 +62,7 @@ model Trainer {
 model Nutritionist {
   id              String     @id @default(uuid()) @db.Uuid
   userId          String     @unique @map("user_id") @db.Uuid
+  crn             String?    @unique
   bio             String?
   certifications  String[]
   yearsExperience Int?       @map("years_experience")
@@ -193,3 +197,5 @@ model Subscription {
   @@index([userId])
   @@map("subscriptions")
 }
+
+

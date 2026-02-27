@@ -1,6 +1,11 @@
-﻿import { IsBoolean, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class UpdateTrainerProfileDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  cref?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(1000)

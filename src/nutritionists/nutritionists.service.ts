@@ -1,4 +1,4 @@
-﻿import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateNutritionistProfileDto } from './dto/update-nutritionist-profile.dto';
 
@@ -10,11 +10,33 @@ export class NutritionistsService {
     return { message: `Nutritionist dashboard for user ${userId}` };
   }
 
+  async getNutritionistProfile(userId: string) {
+    const profile = await this.prisma.nutritionist.findUnique({
+      where: { userId },
+      select: {
+        id: true,
+        userId: true,
+        crn: true,
+        bio: true,
+        yearsExperience: true,
+        approved: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Nutritionist profile not found');
+    }
+
+    return profile;
+  }
+
   async updateNutritionistProfile(
     userId: string,
     dto: UpdateNutritionistProfileDto,
   ) {
     if (
+      dto.crn === undefined &&
       dto.bio === undefined &&
       dto.yearsExperience === undefined &&
       dto.approved === undefined
@@ -25,12 +47,14 @@ export class NutritionistsService {
     return this.prisma.nutritionist.upsert({
       where: { userId },
       update: {
+        crn: dto.crn,
         bio: dto.bio,
         yearsExperience: dto.yearsExperience,
         approved: dto.approved,
       },
       create: {
         userId,
+        crn: dto.crn,
         bio: dto.bio,
         yearsExperience: dto.yearsExperience,
         approved: dto.approved ?? false,
@@ -39,6 +63,7 @@ export class NutritionistsService {
       select: {
         id: true,
         userId: true,
+        crn: true,
         bio: true,
         yearsExperience: true,
         approved: true,

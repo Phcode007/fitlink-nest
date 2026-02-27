@@ -23,9 +23,29 @@ export class AuthService {
       throw new BadRequestException('E-mail already in use');
     }
 
+    if (dto.username) {
+      const existingWithUsername = await this.usersService.findByUsername(
+        dto.username,
+      );
+
+      if (existingWithUsername) {
+        throw new BadRequestException('Username already in use');
+      }
+    }
+
+    if (dto.cpf) {
+      const existingWithCpf = await this.usersService.findByCpf(dto.cpf);
+
+      if (existingWithCpf) {
+        throw new BadRequestException('CPF already in use');
+      }
+    }
+
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = await this.usersService.create({
       email: dto.email,
+      username: dto.username,
+      cpf: dto.cpf,
       passwordHash,
       role: dto.role,
     });

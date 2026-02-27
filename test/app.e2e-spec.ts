@@ -1,4 +1,4 @@
-﻿import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -567,4 +567,61 @@ describe('App (e2e)', () => {
 
     expect(response.body.message).toBe('Insufficient permissions');
   });
+  it('POST /auth/register accepts username and cpf and exposes them in /users/me', async () => {
+    const payload = {
+      email: uniqueEmail('register.identity'),
+      password: '123456',
+      username: `user_${Date.now()}`,
+      cpf: '12345678901',
+    };
+
+    const registerResponse = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send(payload)
+      .expect(201);
+
+    const meResponse = await request(app.getHttpServer())
+      .get('/users/me')
+      .set('Authorization', `Bearer ${registerResponse.body.accessToken}`)
+      .expect(200);
+
+    expect(meResponse.body.username).toBe(payload.username);
+    expect(meResponse.body.cpf).toBe(payload.cpf);
+  });
+
+  it('GET /trainers/profile returns cref for trainer', async () => {
+    const trainer = await registerUser(Role.TRAINER);
+
+    await request(app.getHttpServer())
+      .put('/trainers/profile')
+      .set('Authorization', `Bearer ${trainer.accessToken}`)
+      .send({ cref: 'SP-123456', bio: 'trainer profile' })
+      .expect(200);
+
+    const profileResponse = await request(app.getHttpServer())
+      .get('/trainers/profile')
+      .set('Authorization', `Bearer ${trainer.accessToken}`)
+      .expect(200);
+
+    expect(profileResponse.body.cref).toBe('SP-123456');
+  });
+
+  it('GET /nutritionists/profile returns crn for nutritionist', async () => {
+    const nutritionist = await registerUser(Role.NUTRITIONIST);
+
+    await request(app.getHttpServer())
+      .put('/nutritionists/profile')
+      .set('Authorization', `Bearer ${nutritionist.accessToken}`)
+      .send({ crn: 'CRN3-12345', bio: 'nutritionist profile' })
+      .expect(200);
+
+    const profileResponse = await request(app.getHttpServer())
+      .get('/nutritionists/profile')
+      .set('Authorization', `Bearer ${nutritionist.accessToken}`)
+      .expect(200);
+
+    expect(profileResponse.body.crn).toBe('CRN3-12345');
+  });
 });
+
+
