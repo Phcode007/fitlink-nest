@@ -6,8 +6,16 @@ import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 export class SubscriptionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  listSubscriptions() {
+  listSubscriptions(params?: { userId?: string; page?: number; pageSize?: number }) {
+    const page = params?.page && params.page > 0 ? params.page : 1;
+    const pageSize =
+      params?.pageSize && params.pageSize > 0 && params.pageSize <= 100
+        ? params.pageSize
+        : 20;
+    const skip = (page - 1) * pageSize;
+
     return this.prisma.subscription.findMany({
+      where: params?.userId ? { userId: params.userId } : undefined,
       select: {
         id: true,
         userId: true,
@@ -18,6 +26,8 @@ export class SubscriptionsService {
         updatedAt: true,
       },
       orderBy: { updatedAt: 'desc' },
+      skip,
+      take: pageSize,
     });
   }
 

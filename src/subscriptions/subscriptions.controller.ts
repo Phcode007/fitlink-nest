@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Put, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { PaginationDto } from '../common/dto/pagination.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { SubscriptionsService } from './subscriptions.service';
 
@@ -9,8 +10,11 @@ export class SubscriptionsController {
   constructor(private readonly subscriptionsService: SubscriptionsService) {}
 
   @Get()
-  list() {
-    return this.subscriptionsService.listSubscriptions();
+  list(@Query() pagination: PaginationDto) {
+    return this.subscriptionsService.listSubscriptions({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
   }
 
   @Put(':id')

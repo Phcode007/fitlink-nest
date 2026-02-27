@@ -13,8 +13,16 @@ import { UpdateWorkoutDto } from './dto/update-workout.dto';
 export class WorkoutsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  listWorkoutPlans() {
+  listWorkoutPlans(params?: { userId?: string; page?: number; pageSize?: number }) {
+    const page = params?.page && params.page > 0 ? params.page : 1;
+    const pageSize =
+      params?.pageSize && params.pageSize > 0 && params.pageSize <= 100
+        ? params.pageSize
+        : 20;
+    const skip = (page - 1) * pageSize;
+
     return this.prisma.workoutPlan.findMany({
+      where: params?.userId ? { userId: params.userId } : undefined,
       select: {
         id: true,
         trainerId: true,
@@ -25,6 +33,8 @@ export class WorkoutsService {
         updatedAt: true,
       },
       orderBy: { updatedAt: 'desc' },
+      skip,
+      take: pageSize,
     });
   }
 

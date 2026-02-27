@@ -167,6 +167,8 @@ export class UsersService {
         isActive: true,
         createdAt: true,
       },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
     });
   }
 

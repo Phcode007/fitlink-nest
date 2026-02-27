@@ -13,8 +13,16 @@ import { UpdateDietDto } from './dto/update-diet.dto';
 export class DietsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  listDietPlans() {
+  listDietPlans(params?: { userId?: string; page?: number; pageSize?: number }) {
+    const page = params?.page && params.page > 0 ? params.page : 1;
+    const pageSize =
+      params?.pageSize && params.pageSize > 0 && params.pageSize <= 100
+        ? params.pageSize
+        : 20;
+    const skip = (page - 1) * pageSize;
+
     return this.prisma.dietPlan.findMany({
+      where: params?.userId ? { userId: params.userId } : undefined,
       select: {
         id: true,
         nutritionistId: true,
@@ -26,6 +34,8 @@ export class DietsService {
         updatedAt: true,
       },
       orderBy: { updatedAt: 'desc' },
+      skip,
+      take: pageSize,
     });
   }
 

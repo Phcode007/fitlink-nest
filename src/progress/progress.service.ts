@@ -6,8 +6,16 @@ import { UpdateProgressDto } from './dto/update-progress.dto';
 export class ProgressService {
   constructor(private readonly prisma: PrismaService) {}
 
-  getProgress() {
+  getProgress(params?: { userId?: string; page?: number; pageSize?: number }) {
+    const page = params?.page && params.page > 0 ? params.page : 1;
+    const pageSize =
+      params?.pageSize && params.pageSize > 0 && params.pageSize <= 100
+        ? params.pageSize
+        : 20;
+    const skip = (page - 1) * pageSize;
+
     return this.prisma.bodyMetric.findMany({
+      where: params?.userId ? { userId: params.userId } : undefined,
       select: {
         id: true,
         userId: true,
@@ -19,6 +27,8 @@ export class ProgressService {
         notes: true,
       },
       orderBy: { measuredAt: 'desc' },
+      skip,
+      take: pageSize,
     });
   }
 
