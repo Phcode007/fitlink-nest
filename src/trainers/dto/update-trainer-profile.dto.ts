@@ -4,6 +4,11 @@ export class UpdateTrainerProfileDto {
   @IsOptional()
   @IsString()
   @MaxLength(50)
+  professionalRegistration?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
   cref?: string;
 
   @IsOptional()

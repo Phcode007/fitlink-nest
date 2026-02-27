@@ -6,8 +6,48 @@ import { UpdateTrainerProfileDto } from './dto/update-trainer-profile.dto';
 export class TrainersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  getTrainerDashboard(userId: string) {
-    return { message: `Trainer dashboard for user ${userId}` };
+  async getTrainerDashboard(userId: string) {
+    const trainer = await this.prisma.trainer.findUnique({
+      where: { userId },
+      select: {
+        id: true,
+        userId: true,
+        professionalRegistration: true,
+        bio: true,
+        yearsExperience: true,
+        approved: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!trainer) {
+      throw new NotFoundException('Trainer profile not found');
+    }
+
+    const students = await this.prisma.user.findMany({
+      where: {
+        workoutPlans: {
+          some: {
+            trainerId: trainer.id,
+          },
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isActive: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return {
+      trainer: {
+        ...trainer,
+        cref: trainer.professionalRegistration,
+      },
+      students,
+    };
   }
 
   async getTrainerProfile(userId: string) {
@@ -16,7 +56,7 @@ export class TrainersService {
       select: {
         id: true,
         userId: true,
-        cref: true,
+        professionalRegistration: true,
         bio: true,
         yearsExperience: true,
         approved: true,
@@ -28,12 +68,18 @@ export class TrainersService {
       throw new NotFoundException('Trainer profile not found');
     }
 
-    return profile;
+    return {
+      ...profile,
+      cref: profile.professionalRegistration,
+    };
   }
 
   async updateTrainerProfile(userId: string, dto: UpdateTrainerProfileDto) {
+    const normalizedProfessionalRegistration =
+      dto.professionalRegistration ?? dto.cref;
+
     if (
-      dto.cref === undefined &&
+      normalizedProfessionalRegistration === undefined &&
       dto.bio === undefined &&
       dto.yearsExperience === undefined &&
       dto.approved === undefined
@@ -41,17 +87,28 @@ export class TrainersService {
       throw new BadRequestException('No valid fields provided for update');
     }
 
-    return this.prisma.trainer.upsert({
+    const existingProfile = await this.prisma.trainer.findUnique({
+      where: { userId },
+      select: { id: true, professionalRegistration: true },
+    });
+
+    if (!existingProfile && !normalizedProfessionalRegistration) {
+      throw new BadRequestException(
+        'Professional registration is required for onboarding',
+      );
+    }
+
+    const profile = await this.prisma.trainer.upsert({
       where: { userId },
       update: {
-        cref: dto.cref,
+        professionalRegistration: normalizedProfessionalRegistration,
         bio: dto.bio,
         yearsExperience: dto.yearsExperience,
         approved: dto.approved,
       },
       create: {
         userId,
-        cref: dto.cref,
+        professionalRegistration: normalizedProfessionalRegistration,
         bio: dto.bio,
         yearsExperience: dto.yearsExperience,
         approved: dto.approved ?? false,
@@ -60,13 +117,18 @@ export class TrainersService {
       select: {
         id: true,
         userId: true,
-        cref: true,
+        professionalRegistration: true,
         bio: true,
         yearsExperience: true,
         approved: true,
         updatedAt: true,
       },
     });
+
+    return {
+      ...profile,
+      cref: profile.professionalRegistration,
+    };
   }
 
   async deleteTrainerProfile(userId: string) {

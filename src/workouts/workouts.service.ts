@@ -1,5 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateWorkoutDto } from './dto/create-workout.dto';
 import { UpdateWorkoutDto } from './dto/update-workout.dto';
 
 @Injectable()
@@ -21,7 +28,61 @@ export class WorkoutsService {
     });
   }
 
-  async updateWorkoutPlan(id: string, dto: UpdateWorkoutDto) {
+  async createWorkoutPlan(
+    actor: { sub: string; role: Role },
+    dto: CreateWorkoutDto,
+  ) {
+    const trainer = await this.prisma.trainer.findUnique({
+      where: { userId: actor.sub },
+      select: { id: true, professionalRegistration: true },
+    });
+
+    if (!trainer) {
+      throw new ForbiddenException('Trainer profile required');
+    }
+
+    if (!trainer.professionalRegistration) {
+      throw new BadRequestException(
+        'Professional registration is required for onboarding',
+      );
+    }
+
+    const targetUserId = dto.userId ?? actor.sub;
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundException('Target user not found');
+    }
+
+    return this.prisma.workoutPlan.create({
+      data: {
+        trainerId: trainer.id,
+        userId: targetUserId,
+        title: dto.title,
+        description: dto.description,
+        isActive: dto.isActive ?? true,
+      },
+      select: {
+        id: true,
+        trainerId: true,
+        userId: true,
+        title: true,
+        description: true,
+        isActive: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  async updateWorkoutPlan(
+    actor: { sub: string; role: Role },
+    id: string,
+    dto: UpdateWorkoutDto,
+  ) {
     if (
       dto.title === undefined &&
       dto.description === undefined &&
@@ -30,10 +91,20 @@ export class WorkoutsService {
       throw new BadRequestException('No valid fields provided for update');
     }
 
-    const existing = await this.prisma.workoutPlan.findUnique({ where: { id } });
+    const existing = await this.prisma.workoutPlan.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        trainer: { select: { userId: true } },
+      },
+    });
 
     if (!existing) {
       throw new NotFoundException('Workout plan not found');
+    }
+
+    if (actor.role !== Role.ADMIN && existing.trainer.userId !== actor.sub) {
+      throw new ForbiddenException('You are not allowed to modify this workout');
     }
 
     return this.prisma.workoutPlan.update({
@@ -55,19 +126,25 @@ export class WorkoutsService {
     });
   }
 
-  async deleteWorkoutPlan(id: string) {
-    const existing = await this.prisma.workoutPlan.findUnique({ where: { id } });
+  async deleteWorkoutPlan(actor: { sub: string; role: Role }, id: string) {
+    const existing = await this.prisma.workoutPlan.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        trainer: { select: { userId: true } },
+      },
+    });
 
     if (!existing) {
       throw new NotFoundException('Workout plan not found');
     }
 
-    return this.prisma.workoutPlan.delete({
-      where: { id },
-      select: {
-        id: true,
-        title: true,
-      },
-    });
+    if (actor.role !== Role.ADMIN && existing.trainer.userId !== actor.sub) {
+      throw new ForbiddenException('You are not allowed to delete this workout');
+    }
+
+    await this.prisma.workoutPlan.delete({ where: { id } });
+
+    return { ok: true };
   }
 }

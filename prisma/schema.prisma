@@ -44,33 +44,33 @@ model User {
 }
 
 model Trainer {
-  id              String        @id @default(uuid()) @db.Uuid
-  userId          String        @unique @map("user_id") @db.Uuid
-  cref            String?       @unique
-  bio             String?
-  certifications  String[]
-  yearsExperience Int?          @map("years_experience")
-  approved        Boolean       @default(false)
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workoutPlans    WorkoutPlan[]
+  id                       String        @id @default(uuid()) @db.Uuid
+  userId                   String        @unique @map("user_id") @db.Uuid
+  professionalRegistration String?       @unique @map("professional_registration")
+  bio                      String?
+  certifications           String[]
+  yearsExperience          Int?          @map("years_experience")
+  approved                 Boolean       @default(false)
+  createdAt                DateTime      @default(now()) @map("created_at")
+  updatedAt                DateTime      @updatedAt @map("updated_at")
+  user                     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutPlans             WorkoutPlan[]
 
   @@map("trainers")
 }
 
 model Nutritionist {
-  id              String     @id @default(uuid()) @db.Uuid
-  userId          String     @unique @map("user_id") @db.Uuid
-  crn             String?    @unique
-  bio             String?
-  certifications  String[]
-  yearsExperience Int?       @map("years_experience")
-  approved        Boolean    @default(false)
-  createdAt       DateTime   @default(now()) @map("created_at")
-  updatedAt       DateTime   @updatedAt @map("updated_at")
-  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dietPlans       DietPlan[]
+  id                       String     @id @default(uuid()) @db.Uuid
+  userId                   String     @unique @map("user_id") @db.Uuid
+  professionalRegistration String?    @unique @map("professional_registration")
+  bio                      String?
+  certifications           String[]
+  yearsExperience          Int?       @map("years_experience")
+  approved                 Boolean    @default(false)
+  createdAt                DateTime   @default(now()) @map("created_at")
+  updatedAt                DateTime   @updatedAt @map("updated_at")
+  user                     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dietPlans                DietPlan[]
 
   @@map("nutritionists")
 }
@@ -197,5 +197,3 @@ model Subscription {
   @@index([userId])
   @@map("subscriptions")
 }
-
-

@@ -4,6 +4,11 @@ export class UpdateNutritionistProfileDto {
   @IsOptional()
   @IsString()
   @MaxLength(50)
+  professionalRegistration?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
   crn?: string;
 
   @IsOptional()

@@ -155,11 +155,33 @@ describe('App (e2e)', () => {
     expect(Array.isArray(response.body)).toBe(true);
   });
 
+  it('POST /workouts creates workout for trainer', async () => {
+    const trainer = await registerUser(Role.TRAINER);
+
+    await request(app.getHttpServer())
+      .put('/trainers/profile')
+      .set('Authorization', `Bearer ${trainer.accessToken}`)
+      .send({ professionalRegistration: `CREF-${Date.now()}`, bio: 'trainer' })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .post('/workouts')
+      .set('Authorization', `Bearer ${trainer.accessToken}`)
+      .send({ title: 'Upper Body A', description: 'Push day', isActive: true })
+      .expect(201);
+
+    expect(response.body.title).toBe('Upper Body A');
+    expect(response.body.description).toBe('Push day');
+    expect(response.body.isActive).toBe(true);
+  });
+
   it('PUT /workouts/:id updates workout', async () => {
+    const admin = await registerUser(Role.ADMIN);
     const workout = await createWorkoutPlanSeed();
 
     const response = await request(app.getHttpServer())
       .put(`/workouts/${workout.id}`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
       .send({ title: 'Upper Body A', isActive: false })
       .expect(200);
 
@@ -169,8 +191,11 @@ describe('App (e2e)', () => {
   });
 
   it('PUT /workouts/:id validates payload', async () => {
+    const admin = await registerUser(Role.ADMIN);
+
     await request(app.getHttpServer())
       .put('/workouts/00000000-0000-0000-0000-000000000001')
+      .set('Authorization', `Bearer ${admin.accessToken}`)
       .send({})
       .expect(400);
   });
@@ -181,11 +206,32 @@ describe('App (e2e)', () => {
     expect(Array.isArray(response.body)).toBe(true);
   });
 
+  it('POST /diets creates diet for nutritionist', async () => {
+    const nutritionist = await registerUser(Role.NUTRITIONIST);
+
+    await request(app.getHttpServer())
+      .put('/nutritionists/profile')
+      .set('Authorization', `Bearer ${nutritionist.accessToken}`)
+      .send({ professionalRegistration: `CRN-${Date.now()}`, bio: 'nutritionist' })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .post('/diets')
+      .set('Authorization', `Bearer ${nutritionist.accessToken}`)
+      .send({ title: 'Cutting Plan', description: 'High protein', dailyCalories: 2200 })
+      .expect(201);
+
+    expect(response.body.title).toBe('Cutting Plan');
+    expect(response.body.dailyCalories).toBe(2200);
+  });
+
   it('PUT /diets/:id updates diet', async () => {
+    const admin = await registerUser(Role.ADMIN);
     const diet = await createDietPlanSeed();
 
     const response = await request(app.getHttpServer())
       .put(`/diets/${diet.id}`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
       .send({ title: 'Cutting Plan', dailyCalories: 2200 })
       .expect(200);
 
@@ -195,8 +241,11 @@ describe('App (e2e)', () => {
   });
 
   it('PUT /diets/:id validates payload', async () => {
+    const admin = await registerUser(Role.ADMIN);
+
     await request(app.getHttpServer())
       .put('/diets/00000000-0000-0000-0000-000000000002')
+      .set('Authorization', `Bearer ${admin.accessToken}`)
       .send({})
       .expect(400);
   });
@@ -472,19 +521,32 @@ describe('App (e2e)', () => {
     expect(updateResponse.body.role).toBe(Role.TRAINER);
   });
 
-  it('GET /trainers/dashboard allows trainer role', async () => {
+  it('GET /trainers/dashboard allows trainer role and returns students', async () => {
     const trainer = await registerUser(Role.TRAINER);
 
-    const meResponse = await getMe(trainer.accessToken);
+    const profileResponse = await request(app.getHttpServer())
+      .put('/trainers/profile')
+      .set('Authorization', `Bearer ${trainer.accessToken}`)
+      .send({ professionalRegistration: `CREF-${Date.now()}`, bio: 'trainer dash' })
+      .expect(200);
+
+    const studentUser = await createDbUser(Role.USER);
+    await prisma.workoutPlan.create({
+      data: {
+        trainerId: profileResponse.body.id,
+        userId: studentUser.id,
+        title: 'Student workout',
+      },
+    });
 
     const dashboardResponse = await request(app.getHttpServer())
       .get('/trainers/dashboard')
       .set('Authorization', `Bearer ${trainer.accessToken}`)
       .expect(200);
 
-    expect(dashboardResponse.body.message).toBe(
-      `Trainer dashboard for user ${meResponse.id}`,
-    );
+    expect(dashboardResponse.body.trainer.professionalRegistration).toBeDefined();
+    expect(Array.isArray(dashboardResponse.body.students)).toBe(true);
+    expect(dashboardResponse.body.students.some((s: any) => s.id === studentUser.id)).toBe(true);
   });
 
   it('PUT /trainers/profile allows trainer role', async () => {
@@ -493,9 +555,10 @@ describe('App (e2e)', () => {
     const response = await request(app.getHttpServer())
       .put('/trainers/profile')
       .set('Authorization', `Bearer ${trainer.accessToken}`)
-      .send({ bio: 'CREF owner', yearsExperience: 4 })
+      .send({ professionalRegistration: `CREF-${Date.now()}`, bio: 'CREF owner', yearsExperience: 4 })
       .expect(200);
 
+    expect(response.body.professionalRegistration).toBeDefined();
     expect(response.body.bio).toBe('CREF owner');
     expect(response.body.yearsExperience).toBe(4);
   });
@@ -519,19 +582,32 @@ describe('App (e2e)', () => {
       .expect(403);
   });
 
-  it('GET /nutritionists/dashboard allows nutritionist role', async () => {
+  it('GET /nutritionists/dashboard allows nutritionist role and returns patients', async () => {
     const nutritionist = await registerUser(Role.NUTRITIONIST);
 
-    const meResponse = await getMe(nutritionist.accessToken);
+    const profileResponse = await request(app.getHttpServer())
+      .put('/nutritionists/profile')
+      .set('Authorization', `Bearer ${nutritionist.accessToken}`)
+      .send({ professionalRegistration: `CRN-${Date.now()}`, bio: 'nutritionist dash' })
+      .expect(200);
+
+    const patientUser = await createDbUser(Role.USER);
+    await prisma.dietPlan.create({
+      data: {
+        nutritionistId: profileResponse.body.id,
+        userId: patientUser.id,
+        title: 'Patient diet',
+      },
+    });
 
     const dashboardResponse = await request(app.getHttpServer())
       .get('/nutritionists/dashboard')
       .set('Authorization', `Bearer ${nutritionist.accessToken}`)
       .expect(200);
 
-    expect(dashboardResponse.body.message).toBe(
-      `Nutritionist dashboard for user ${meResponse.id}`,
-    );
+    expect(dashboardResponse.body.nutritionist.professionalRegistration).toBeDefined();
+    expect(Array.isArray(dashboardResponse.body.patients)).toBe(true);
+    expect(dashboardResponse.body.patients.some((p: any) => p.id === patientUser.id)).toBe(true);
   });
 
   it('PUT /nutritionists/profile allows nutritionist role', async () => {
@@ -540,9 +616,10 @@ describe('App (e2e)', () => {
     const response = await request(app.getHttpServer())
       .put('/nutritionists/profile')
       .set('Authorization', `Bearer ${nutritionist.accessToken}`)
-      .send({ bio: 'sports nutrition', yearsExperience: 7 })
+      .send({ professionalRegistration: `CRN-${Date.now()}`, bio: 'sports nutrition', yearsExperience: 7 })
       .expect(200);
 
+    expect(response.body.professionalRegistration).toBeDefined();
     expect(response.body.bio).toBe('sports nutrition');
     expect(response.body.yearsExperience).toBe(7);
   });
@@ -627,30 +704,36 @@ describe('App (e2e)', () => {
   });
 
   it('DELETE /workouts/:id removes workout plan', async () => {
+    const admin = await registerUser(Role.ADMIN);
     const workout = await createWorkoutPlanSeed();
 
     const response = await request(app.getHttpServer())
       .delete(`/workouts/${workout.id}`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
       .expect(200);
 
-    expect(response.body.id).toBe(workout.id);
+    expect(response.body.ok).toBe(true);
 
     await request(app.getHttpServer())
       .delete(`/workouts/${workout.id}`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
       .expect(404);
   });
 
   it('DELETE /diets/:id removes diet plan', async () => {
+    const admin = await registerUser(Role.ADMIN);
     const diet = await createDietPlanSeed();
 
     const response = await request(app.getHttpServer())
       .delete(`/diets/${diet.id}`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
       .expect(200);
 
-    expect(response.body.id).toBe(diet.id);
+    expect(response.body.ok).toBe(true);
 
     await request(app.getHttpServer())
       .delete(`/diets/${diet.id}`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
       .expect(404);
   });
 
@@ -768,3 +851,6 @@ describe('App (e2e)', () => {
       .expect(404);
   });
 });
+
+
+

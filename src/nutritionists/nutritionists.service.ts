@@ -6,8 +6,48 @@ import { UpdateNutritionistProfileDto } from './dto/update-nutritionist-profile.
 export class NutritionistsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  getNutritionistDashboard(userId: string) {
-    return { message: `Nutritionist dashboard for user ${userId}` };
+  async getNutritionistDashboard(userId: string) {
+    const nutritionist = await this.prisma.nutritionist.findUnique({
+      where: { userId },
+      select: {
+        id: true,
+        userId: true,
+        professionalRegistration: true,
+        bio: true,
+        yearsExperience: true,
+        approved: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!nutritionist) {
+      throw new NotFoundException('Nutritionist profile not found');
+    }
+
+    const patients = await this.prisma.user.findMany({
+      where: {
+        dietPlans: {
+          some: {
+            nutritionistId: nutritionist.id,
+          },
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isActive: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return {
+      nutritionist: {
+        ...nutritionist,
+        crn: nutritionist.professionalRegistration,
+      },
+      patients,
+    };
   }
 
   async getNutritionistProfile(userId: string) {
@@ -16,7 +56,7 @@ export class NutritionistsService {
       select: {
         id: true,
         userId: true,
-        crn: true,
+        professionalRegistration: true,
         bio: true,
         yearsExperience: true,
         approved: true,
@@ -28,15 +68,21 @@ export class NutritionistsService {
       throw new NotFoundException('Nutritionist profile not found');
     }
 
-    return profile;
+    return {
+      ...profile,
+      crn: profile.professionalRegistration,
+    };
   }
 
   async updateNutritionistProfile(
     userId: string,
     dto: UpdateNutritionistProfileDto,
   ) {
+    const normalizedProfessionalRegistration =
+      dto.professionalRegistration ?? dto.crn;
+
     if (
-      dto.crn === undefined &&
+      normalizedProfessionalRegistration === undefined &&
       dto.bio === undefined &&
       dto.yearsExperience === undefined &&
       dto.approved === undefined
@@ -44,17 +90,28 @@ export class NutritionistsService {
       throw new BadRequestException('No valid fields provided for update');
     }
 
-    return this.prisma.nutritionist.upsert({
+    const existingProfile = await this.prisma.nutritionist.findUnique({
+      where: { userId },
+      select: { id: true, professionalRegistration: true },
+    });
+
+    if (!existingProfile && !normalizedProfessionalRegistration) {
+      throw new BadRequestException(
+        'Professional registration is required for onboarding',
+      );
+    }
+
+    const profile = await this.prisma.nutritionist.upsert({
       where: { userId },
       update: {
-        crn: dto.crn,
+        professionalRegistration: normalizedProfessionalRegistration,
         bio: dto.bio,
         yearsExperience: dto.yearsExperience,
         approved: dto.approved,
       },
       create: {
         userId,
-        crn: dto.crn,
+        professionalRegistration: normalizedProfessionalRegistration,
         bio: dto.bio,
         yearsExperience: dto.yearsExperience,
         approved: dto.approved ?? false,
@@ -63,13 +120,18 @@ export class NutritionistsService {
       select: {
         id: true,
         userId: true,
-        crn: true,
+        professionalRegistration: true,
         bio: true,
         yearsExperience: true,
         approved: true,
         updatedAt: true,
       },
     });
+
+    return {
+      ...profile,
+      crn: profile.professionalRegistration,
+    };
   }
 
   async deleteNutritionistProfile(userId: string) {
