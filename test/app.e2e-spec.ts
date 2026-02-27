@@ -850,7 +850,126 @@ describe('App (e2e)', () => {
       .set('Authorization', `Bearer ${nutritionist.accessToken}`)
       .expect(404);
   });
-});
+  it('GET /professionals/search filters by name and role', async () => {
+    const seeker = await registerUser(Role.USER);
 
+    const trainerEmail = uniqueEmail('search.trainer');
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: trainerEmail, password: '123456', role: Role.TRAINER, name: 'Carlos Trainer' })
+      .expect(201);
+
+    const nutritionistEmail = uniqueEmail('search.nutri');
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: nutritionistEmail, password: '123456', role: Role.NUTRITIONIST, name: 'Carla Nutri' })
+      .expect(201);
+
+    const trainerSearch = await request(app.getHttpServer())
+      .get('/professionals/search?q=car&role=TRAINER')
+      .set('Authorization', `Bearer ${seeker.accessToken}`)
+      .expect(200);
+
+    expect(Array.isArray(trainerSearch.body.data)).toBe(true);
+    expect(trainerSearch.body.data.some((p: any) => p.role === 'TRAINER')).toBe(true);
+    expect(trainerSearch.body.data.some((p: any) => p.role === 'NUTRITIONIST')).toBe(false);
+  });
+
+  it('PUT /workouts/:id returns 403 for non-owner trainer', async () => {
+    const owner = await registerUser(Role.TRAINER);
+    const intruder = await registerUser(Role.TRAINER);
+
+    const ownerProfile = await request(app.getHttpServer())
+      .put('/trainers/profile')
+      .set('Authorization', `Bearer ${owner.accessToken}`)
+      .send({ professionalRegistration: `CREF-OWNER-${Date.now()}` })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .put('/trainers/profile')
+      .set('Authorization', `Bearer ${intruder.accessToken}`)
+      .send({ professionalRegistration: `CREF-INTRUDER-${Date.now()}` })
+      .expect(200);
+
+    const targetUser = await createDbUser(Role.USER);
+    const workout = await prisma.workoutPlan.create({
+      data: {
+        trainerId: ownerProfile.body.id,
+        userId: targetUser.id,
+        title: 'Owner workout',
+      },
+    });
+
+    await request(app.getHttpServer())
+      .put(`/workouts/${workout.id}`)
+      .set('Authorization', `Bearer ${intruder.accessToken}`)
+      .send({ title: 'Hijacked' })
+      .expect(403);
+  });
+
+  it('PUT /diets/:id returns 403 for non-owner nutritionist', async () => {
+    const owner = await registerUser(Role.NUTRITIONIST);
+    const intruder = await registerUser(Role.NUTRITIONIST);
+
+    const ownerProfile = await request(app.getHttpServer())
+      .put('/nutritionists/profile')
+      .set('Authorization', `Bearer ${owner.accessToken}`)
+      .send({ professionalRegistration: `CRN-OWNER-${Date.now()}` })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .put('/nutritionists/profile')
+      .set('Authorization', `Bearer ${intruder.accessToken}`)
+      .send({ professionalRegistration: `CRN-INTRUDER-${Date.now()}` })
+      .expect(200);
+
+    const targetUser = await createDbUser(Role.USER);
+    const diet = await prisma.dietPlan.create({
+      data: {
+        nutritionistId: ownerProfile.body.id,
+        userId: targetUser.id,
+        title: 'Owner diet',
+      },
+    });
+
+    await request(app.getHttpServer())
+      .put(`/diets/${diet.id}`)
+      .set('Authorization', `Bearer ${intruder.accessToken}`)
+      .send({ title: 'Hijacked' })
+      .expect(403);
+  });
+
+  it('POST /onboarding/complete completes user onboarding', async () => {
+    const user = await registerUser();
+
+    const response = await request(app.getHttpServer())
+      .post('/onboarding/complete')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .send({
+        heightCm: 180,
+        weightKg: 82,
+        plan: 'PREMIUM',
+      })
+      .expect(201);
+
+    expect(response.body.profile).toBeDefined();
+    expect(response.body.progress).toBeDefined();
+    expect(response.body.subscription.planName).toBe('PREMIUM');
+  });
+
+  it('POST /onboarding/complete validates professional registration for trainer', async () => {
+    const trainer = await registerUser(Role.TRAINER);
+
+    await request(app.getHttpServer())
+      .post('/onboarding/complete')
+      .set('Authorization', `Bearer ${trainer.accessToken}`)
+      .send({
+        heightCm: 180,
+        weightKg: 82,
+        plan: 'PREMIUM',
+      })
+      .expect(400);
+  });
+});
 
 

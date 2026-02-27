@@ -13,6 +13,7 @@ export class UsersService {
     return this.prisma.user.create({
       data: {
         email: input.email,
+        name: input.name,
         username: input.username,
         cpf: input.cpf,
         passwordHash: input.passwordHash,
@@ -38,6 +39,7 @@ export class UsersService {
       where: { id },
       select: {
         id: true,
+        name: true,
         email: true,
         username: true,
         cpf: true,
@@ -58,6 +60,7 @@ export class UsersService {
   async updateMe(userId: string, dto: UpdateMeDto) {
     const updateData: {
       email?: string;
+      name?: string;
       username?: string;
       cpf?: string;
       passwordHash?: string;
@@ -73,6 +76,10 @@ export class UsersService {
       }
 
       updateData.email = dto.email;
+    }
+
+    if (dto.name) {
+      updateData.name = dto.name;
     }
 
     if (dto.username) {
@@ -105,6 +112,7 @@ export class UsersService {
 
     if (
       !updateData.email &&
+      !updateData.name &&
       !updateData.username &&
       !updateData.cpf &&
       !updateData.passwordHash
@@ -117,6 +125,7 @@ export class UsersService {
       data: updateData,
       select: {
         id: true,
+        name: true,
         email: true,
         username: true,
         cpf: true,
@@ -134,6 +143,7 @@ export class UsersService {
       data: { role },
       select: {
         id: true,
+        name: true,
         email: true,
         username: true,
         cpf: true,
@@ -149,10 +159,12 @@ export class UsersService {
     return this.prisma.user.findMany({
       select: {
         id: true,
+        name: true,
         email: true,
         username: true,
         cpf: true,
         role: true,
+        isActive: true,
         createdAt: true,
       },
     });

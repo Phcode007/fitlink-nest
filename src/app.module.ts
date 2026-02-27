@@ -1,11 +1,13 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { DietsModule } from './diets/diets.module';
 import { NutritionistsModule } from './nutritionists/nutritionists.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ProfessionalsModule } from './professionals/professionals.module';
 import { ProgressModule } from './progress/progress.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { TrainersModule } from './trainers/trainers.module';
@@ -20,6 +22,8 @@ import { WorkoutsModule } from './workouts/workouts.module';
     UsersModule,
     TrainersModule,
     NutritionistsModule,
+    ProfessionalsModule,
+    OnboardingModule,
     WorkoutsModule,
     DietsModule,
     ProgressModule,

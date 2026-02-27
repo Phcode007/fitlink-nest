@@ -44,6 +44,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = await this.usersService.create({
       email: dto.email,
+      name: dto.name,
       username: dto.username,
       cpf: dto.cpf,
       passwordHash,
