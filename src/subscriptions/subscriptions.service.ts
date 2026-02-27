@@ -1,4 +1,4 @@
-﻿import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 
@@ -46,6 +46,22 @@ export class SubscriptionsService {
         currentPeriodStart: true,
         currentPeriodEnd: true,
         updatedAt: true,
+      },
+    });
+  }
+
+  async deleteSubscription(id: string) {
+    const existing = await this.prisma.subscription.findUnique({ where: { id } });
+
+    if (!existing) {
+      throw new NotFoundException('Subscription not found');
+    }
+
+    return this.prisma.subscription.delete({
+      where: { id },
+      select: {
+        id: true,
+        userId: true,
       },
     });
   }

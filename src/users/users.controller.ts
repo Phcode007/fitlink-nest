@@ -1,6 +1,7 @@
-﻿import {
+import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Put,
@@ -37,6 +38,13 @@ export class UsersController {
     return this.usersService.updateMe(user.sub, dto);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Delete('me')
+  deleteMe(@Req() req: Request) {
+    const user = req.user as { sub: string };
+    return this.usersService.deleteUser(user.sub);
+  }
+
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get('admin')
@@ -49,6 +57,13 @@ export class UsersController {
   @Put(':id/role')
   updateUserRole(@Param('id') id: string, @Body() dto: UpdateUserRoleDto) {
     return this.usersService.updateUserRole(id, dto.role);
+  }
+
+  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Delete(':id')
+  deleteUser(@Param('id') id: string) {
+    return this.usersService.deleteUser(id);
   }
 
   @Roles(Role.ADMIN)

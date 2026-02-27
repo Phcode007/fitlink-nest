@@ -568,11 +568,12 @@ describe('App (e2e)', () => {
     expect(response.body.message).toBe('Insufficient permissions');
   });
   it('POST /auth/register accepts username and cpf and exposes them in /users/me', async () => {
+    const cpf = `${Math.floor(10000000000 + Math.random() * 89999999999)}`;
     const payload = {
       email: uniqueEmail('register.identity'),
       password: '123456',
       username: `user_${Date.now()}`,
-      cpf: '12345678901',
+      cpf,
     };
 
     const registerResponse = await request(app.getHttpServer())
@@ -591,11 +592,12 @@ describe('App (e2e)', () => {
 
   it('GET /trainers/profile returns cref for trainer', async () => {
     const trainer = await registerUser(Role.TRAINER);
+    const cref = `SP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     await request(app.getHttpServer())
       .put('/trainers/profile')
       .set('Authorization', `Bearer ${trainer.accessToken}`)
-      .send({ cref: 'SP-123456', bio: 'trainer profile' })
+      .send({ cref, bio: 'trainer profile' })
       .expect(200);
 
     const profileResponse = await request(app.getHttpServer())
@@ -603,16 +605,17 @@ describe('App (e2e)', () => {
       .set('Authorization', `Bearer ${trainer.accessToken}`)
       .expect(200);
 
-    expect(profileResponse.body.cref).toBe('SP-123456');
+    expect(profileResponse.body.cref).toBe(cref);
   });
 
   it('GET /nutritionists/profile returns crn for nutritionist', async () => {
     const nutritionist = await registerUser(Role.NUTRITIONIST);
+    const crn = `CRN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     await request(app.getHttpServer())
       .put('/nutritionists/profile')
       .set('Authorization', `Bearer ${nutritionist.accessToken}`)
-      .send({ crn: 'CRN3-12345', bio: 'nutritionist profile' })
+      .send({ crn, bio: 'nutritionist profile' })
       .expect(200);
 
     const profileResponse = await request(app.getHttpServer())
@@ -620,8 +623,148 @@ describe('App (e2e)', () => {
       .set('Authorization', `Bearer ${nutritionist.accessToken}`)
       .expect(200);
 
-    expect(profileResponse.body.crn).toBe('CRN3-12345');
+    expect(profileResponse.body.crn).toBe(crn);
+  });
+
+  it('DELETE /workouts/:id removes workout plan', async () => {
+    const workout = await createWorkoutPlanSeed();
+
+    const response = await request(app.getHttpServer())
+      .delete(`/workouts/${workout.id}`)
+      .expect(200);
+
+    expect(response.body.id).toBe(workout.id);
+
+    await request(app.getHttpServer())
+      .delete(`/workouts/${workout.id}`)
+      .expect(404);
+  });
+
+  it('DELETE /diets/:id removes diet plan', async () => {
+    const diet = await createDietPlanSeed();
+
+    const response = await request(app.getHttpServer())
+      .delete(`/diets/${diet.id}`)
+      .expect(200);
+
+    expect(response.body.id).toBe(diet.id);
+
+    await request(app.getHttpServer())
+      .delete(`/diets/${diet.id}`)
+      .expect(404);
+  });
+
+  it('DELETE /progress/:id removes progress entry', async () => {
+    const metric = await createProgressSeed();
+
+    const response = await request(app.getHttpServer())
+      .delete(`/progress/${metric.id}`)
+      .expect(200);
+
+    expect(response.body.id).toBe(metric.id);
+
+    await request(app.getHttpServer())
+      .delete(`/progress/${metric.id}`)
+      .expect(404);
+  });
+
+  it('DELETE /subscriptions/:id removes subscription', async () => {
+    const subscription = await createSubscriptionSeed();
+
+    const response = await request(app.getHttpServer())
+      .delete(`/subscriptions/${subscription.id}`)
+      .expect(200);
+
+    expect(response.body.id).toBe(subscription.id);
+
+    await request(app.getHttpServer())
+      .delete(`/subscriptions/${subscription.id}`)
+      .expect(404);
+  });
+
+  it('DELETE /users/me removes authenticated user', async () => {
+    const user = await registerUser();
+
+    const deleteResponse = await request(app.getHttpServer())
+      .delete('/users/me')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .expect(200);
+
+    expect(deleteResponse.body.email).toBe(user.email);
+
+    await request(app.getHttpServer())
+      .get('/users/me')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .expect(404);
+  });
+
+  it('DELETE /users/:id denies non-admin users', async () => {
+    const actor = await registerUser();
+    const target = await registerUser();
+    const targetMe = await getMe(target.accessToken);
+
+    await request(app.getHttpServer())
+      .delete(`/users/${targetMe.id}`)
+      .set('Authorization', `Bearer ${actor.accessToken}`)
+      .expect(403);
+  });
+
+  it('DELETE /users/:id allows admin users', async () => {
+    const admin = await registerUser(Role.ADMIN);
+    const target = await registerUser();
+    const targetMe = await getMe(target.accessToken);
+
+    const response = await request(app.getHttpServer())
+      .delete(`/users/${targetMe.id}`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .expect(200);
+
+    expect(response.body.id).toBe(targetMe.id);
+  });
+
+  it('DELETE /trainers/profile removes trainer profile', async () => {
+    const trainer = await registerUser(Role.TRAINER);
+    const cref = `SP-DEL-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    await request(app.getHttpServer())
+      .put('/trainers/profile')
+      .set('Authorization', `Bearer ${trainer.accessToken}`)
+      .send({ cref, bio: 'to delete' })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .delete('/trainers/profile')
+      .set('Authorization', `Bearer ${trainer.accessToken}`)
+      .expect(200);
+
+    expect(response.body).toHaveProperty('id');
+
+    await request(app.getHttpServer())
+      .get('/trainers/profile')
+      .set('Authorization', `Bearer ${trainer.accessToken}`)
+      .expect(404);
+  });
+
+  it('DELETE /nutritionists/profile removes nutritionist profile', async () => {
+    const nutritionist = await registerUser(Role.NUTRITIONIST);
+    const crn = `CRN-DEL-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    await request(app.getHttpServer())
+      .put('/nutritionists/profile')
+      .set('Authorization', `Bearer ${nutritionist.accessToken}`)
+      .send({ crn, bio: 'to delete' })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .delete('/nutritionists/profile')
+      .set('Authorization', `Bearer ${nutritionist.accessToken}`)
+      .expect(200);
+
+    expect(response.body).toHaveProperty('id');
+
+    await request(app.getHttpServer())
+      .get('/nutritionists/profile')
+      .set('Authorization', `Bearer ${nutritionist.accessToken}`)
+      .expect(404);
   });
 });
-
-

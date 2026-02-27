@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -39,5 +39,13 @@ export class NutritionistsController {
   ) {
     const user = req.user as { sub: string };
     return this.nutritionistsService.updateNutritionistProfile(user.sub, dto);
+  }
+
+  @Roles(Role.NUTRITIONIST)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Delete('profile')
+  deleteProfile(@Req() req: Request) {
+    const user = req.user as { sub: string };
+    return this.nutritionistsService.deleteNutritionistProfile(user.sub);
   }
 }

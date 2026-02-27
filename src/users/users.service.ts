@@ -157,4 +157,20 @@ export class UsersService {
       },
     });
   }
+
+  async deleteUser(userId: string) {
+    const existing = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!existing) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.prisma.user.delete({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+      },
+    });
+  }
 }

@@ -1,4 +1,4 @@
-﻿import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateDietDto } from './dto/update-diet.dto';
 
@@ -55,6 +55,22 @@ export class DietsService {
         dailyCalories: true,
         isActive: true,
         updatedAt: true,
+      },
+    });
+  }
+
+  async deleteDietPlan(id: string) {
+    const existing = await this.prisma.dietPlan.findUnique({ where: { id } });
+
+    if (!existing) {
+      throw new NotFoundException('Diet plan not found');
+    }
+
+    return this.prisma.dietPlan.delete({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
       },
     });
   }

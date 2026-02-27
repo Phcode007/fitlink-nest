@@ -68,4 +68,20 @@ export class TrainersService {
       },
     });
   }
+
+  async deleteTrainerProfile(userId: string) {
+    const existing = await this.prisma.trainer.findUnique({ where: { userId } });
+
+    if (!existing) {
+      throw new NotFoundException('Trainer profile not found');
+    }
+
+    return this.prisma.trainer.delete({
+      where: { userId },
+      select: {
+        id: true,
+        userId: true,
+      },
+    });
+  }
 }

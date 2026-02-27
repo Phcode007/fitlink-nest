@@ -1,4 +1,4 @@
-﻿import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProgressDto } from './dto/update-progress.dto';
 
@@ -57,6 +57,22 @@ export class ProgressService {
         muscleMassKg: true,
         bmi: true,
         notes: true,
+      },
+    });
+  }
+
+  async deleteProgress(id: string) {
+    const existing = await this.prisma.bodyMetric.findUnique({ where: { id } });
+
+    if (!existing) {
+      throw new NotFoundException('Progress entry not found');
+    }
+
+    return this.prisma.bodyMetric.delete({
+      where: { id },
+      select: {
+        id: true,
+        userId: true,
       },
     });
   }

@@ -71,4 +71,22 @@ export class NutritionistsService {
       },
     });
   }
+
+  async deleteNutritionistProfile(userId: string) {
+    const existing = await this.prisma.nutritionist.findUnique({
+      where: { userId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Nutritionist profile not found');
+    }
+
+    return this.prisma.nutritionist.delete({
+      where: { userId },
+      select: {
+        id: true,
+        userId: true,
+      },
+    });
+  }
 }

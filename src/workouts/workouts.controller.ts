@@ -1,4 +1,4 @@
-﻿import { Body, Controller, Get, Param, Put } from '@nestjs/common';
+import { Controller, Delete, Get, Param, Body, Put } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UpdateWorkoutDto } from './dto/update-workout.dto';
 import { WorkoutsService } from './workouts.service';
@@ -16,5 +16,10 @@ export class WorkoutsController {
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpdateWorkoutDto) {
     return this.workoutsService.updateWorkoutPlan(id, dto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.workoutsService.deleteWorkoutPlan(id);
   }
 }

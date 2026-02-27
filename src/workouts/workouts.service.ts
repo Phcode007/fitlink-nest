@@ -1,4 +1,4 @@
-﻿import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateWorkoutDto } from './dto/update-workout.dto';
 
@@ -51,6 +51,22 @@ export class WorkoutsService {
         description: true,
         isActive: true,
         updatedAt: true,
+      },
+    });
+  }
+
+  async deleteWorkoutPlan(id: string) {
+    const existing = await this.prisma.workoutPlan.findUnique({ where: { id } });
+
+    if (!existing) {
+      throw new NotFoundException('Workout plan not found');
+    }
+
+    return this.prisma.workoutPlan.delete({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
       },
     });
   }
